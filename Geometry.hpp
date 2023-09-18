@@ -11,12 +11,14 @@ const Real PI = acos(static_cast<Real>(-1));
 
 struct Point;   // 点
 struct Line;    // 直线
-struct Seg;     // 线段
+struct Segment;     // 线段
 struct Polygon; // 多边形
 struct Circle;  // 圆
 typedef Point Vec;
+
 using Points = std::vector<Point>;
-using Lines  = std::vector<Line>;
+using Lines  = std::vector<Line> ;
+
 // 位置关系
 enum Position { CCW = 1, CW = -1, BACK = 2, FORNT = -2, ON = 0 };
 // 包含关系
@@ -34,29 +36,32 @@ inline int cmp(const Real &a, const Real &b) {
 inline bool eq(const Real &a, const Real &b) {
     return cmp(a, b) == 0;
 }
+
 // 距离
 Real distance(const Point& a,   const Point& b);
 Real distance(const Line& l,    const Point& p);
 Real distance(const Line& l,    const Line& m);
-Real distance(const Line& l,    const Seg& s);
-Real distance(const Seg& s,     const Point& p);
-Real distance(const Seg& s,     const Seg& t);
+Real distance(const Line& l,    const Segment& s);
+Real distance(const Segment& s,     const Point& p);
+Real distance(const Segment& s,     const Segment& t);
+
 // 相交判断
 bool intersect(const Line& l,   const Point& p);
 bool intersect(const Line& l,   const Line& m);
-bool intersect(const Line& l,   const Seg& s);
-bool intersect(const Seg& s,    const Point& p);
-bool intersect(const Seg& s,    const Seg& t);
+bool intersect(const Line& l,   const Segment& s);
+bool intersect(const Segment& s,    const Point& p);
+bool intersect(const Segment& s,    const Segment& t);
 bool intersect(const Circle& O, const Line& l);
-int  intersect(const Circle& O, const Seg& s);
+int  intersect(const Circle& O, const Segment& s);
 int intersect(const Circle& c,  const Polygon& ps);
+
 // 交点
-Point crosspoint(const Line& l, const Line& m);
+Point  crosspoint(const Line& l, const Line& m);
 Points crosspoint(const Circle& c, const Line& l);
-Points crosspoint(const Circle& c, const Seg& s);
+Points crosspoint(const Circle& c, const Segment& s);
 Points crosspoint(const Circle& c1, const Circle& c2);
 
-// 根据极坐标得到直角坐标系中的点
+// 极坐标与直角坐标变换
 Point polar(const Real& r, const Real& theta);
 // 点在直线上的投影点
 Point proj(const Point& p, const Line& l);
@@ -79,7 +84,7 @@ void CCWwhitO(Point O, Points &ps);
 // 平面最近点
 Real closest_pair(Points ps);
 // 判断点与多边形位置关系
-int iscontain(const Point &a, const Points &ps);
+int iscontain(const Point &a, const Polygon &ps);
 // 求平面上所有点的凸包
 Polygon Convexhell(Points &ps);
 // 求凸多边形直径
@@ -96,7 +101,7 @@ Lines common_tangent(const Circle& c1, const Circle& c2);
 Circle circumcircle(Point a, Point b, const Point& c);
 // 三角形内切圆
 Circle incircle(const Point& a, const Point& b, const Point& c);
-// 切点
+// 点关于圆切点
 Points tangent_to_circle(const Circle& c, const Point& p);
 // 两圆公共面积
 Real commonarea(Circle c1, Circle c2);
@@ -220,9 +225,9 @@ struct Line {
     }
 };
 
-struct Seg : Line {
-    Seg() {}
-    Seg(Point a, Point b) : Line(a, b) {}
+struct Segment : Line {
+    Segment() {}
+    Segment(Point a, Point b) : Line(a, b) {}
     Real len() const { return diff().abs(); }
 };
 
@@ -291,20 +296,20 @@ Real distance(const Point &p, const Line& l) {
 Real distance(const Line& l, const Line& m) {
     return intersect(l, m) ? 0 : distance(l, m.a);
 }
-Real distance(const Line& l, const Seg& s) {
+Real distance(const Line& l, const Segment& s) {
     return intersect(l, s) ? 0 : std::min(distance(l, s.a), distance(l, s.b));
 }
-Real distance(const Seg& s, const Line& l) {
+Real distance(const Segment& s, const Line& l) {
     return distance(l, s);
 }
-Real distance(const Seg& s, const Point& p) {
+Real distance(const Segment& s, const Point& p) {
     Point h = proj(p, s);
     return intersect(s, h) ? distance(p, h) : std::min(distance(p, s.a), distance(p, s.b));
 }
-Real distance(const Point& p, const Seg& s) {
+Real distance(const Point& p, const Segment& s) {
     return distance(p, s);
 }
-Real distance(const Seg& s, const Seg& t) {
+Real distance(const Segment& s, const Segment& t) {
     if (intersect(s, t)) return 0;
     return std::min({distance(s, t.a), distance(s, t.b), distance(t, s.a), distance(t, s.b)});
 }
@@ -319,15 +324,15 @@ bool intersect(const Line& l, const Line& m) {
     return !LPL(l, m);
 }
 
-bool intersect(const Line& l, const Seg& s) {
+bool intersect(const Line& l, const Segment& s) {
     return sgn(crs(l.diff(), s.a - l.a)) * sgn(crs(l.diff(), s.b - l.a)) <= 0;
 }
 
-bool intersect(const Seg& s, const Point& p) {
+bool intersect(const Segment& s, const Point& p) {
     return ccw(s.a, s.b, p) == 0;
 }
 
-bool intersect(const Seg& s, const Seg& t) {
+bool intersect(const Segment& s, const Segment& t) {
     return ccw(s.a, s.b, t.a) * ccw(s.a, s.b, t.b) <= 0 && ccw(t.a, t.b, s.a) * ccw(t.a, t.b, s.b) <= 0;
 }
 
@@ -339,7 +344,7 @@ bool intersect(const Line& l, const Circle& O) {
     return intersect(O, l);
 }
 
-int intersect(const Circle& c, const Seg& s) {
+int intersect(const Circle& c, const Segment& s) {
     Point h = proj(c.c, s);
     if (cmp(distance(c.c, h), c.r) > 0) return 0;
     Real d1 = (c.c - s.a).abs(), d2 = (c.c - s.b).abs();
@@ -435,10 +440,10 @@ struct Polygon : Points {
         }
         return abs(res) / 2;
     }
-    bool is_convex(bool accept_on_segment = false) const {
+    bool is_convex(bool accept_on_Segmentment = false) const {
         int n = size();
         for (int i = 0; i < n; i++) {
-            if (accept_on_segment) {
+            if (accept_on_Segmentment) {
                 if (ccw((*this)[i], (*this)[(i + 1) % n], (*this)[(i + 2) % n]) == CW) {
                     return false;
                 }
@@ -452,7 +457,7 @@ struct Polygon : Points {
     }
 };
 
-int iscontain(const Point &a, const Points &ps) {
+int iscontain(const Point &a, const Polygon &ps) {
     int cnt = 0;
     for(int i = 0; i < ps.size(); i ++) {
         int j = (i + 1) % ps.size();
@@ -583,7 +588,7 @@ Circle circumcircle(Point a, Point b, const Point& c) {
 Circle incircle(const Point& a, const Point& b, const Point& c) {
     Real A = (b - c).abs(), B = (c - a).abs(), C = (a - b).abs();
     Point O = (a * A + b * B + c * C) / (A + B + C);
-    return Circle(O, distance(Seg(a, b), O));
+    return Circle(O, distance(Segment(a, b), O));
 }
 
 Points crosspoint(const Circle& c, const Line& l) {
@@ -595,7 +600,7 @@ Points crosspoint(const Circle& c, const Line& l) {
     return {h - v, h + v};
 }
 
-Points crosspoint(const Circle& c, const Seg& s) {
+Points crosspoint(const Circle& c, const Segment& s) {
     int num = intersect(c, s);
     if (num == 0) return {};
     auto res = crosspoint(c, Line(s.a, s.b));
@@ -653,7 +658,7 @@ int intersect(const Circle& c, const Polygon& ps) {
     Real d = 1e18;
     int n = ps.size();
     for(int i = 0; i < n; i ++) {
-        d = std::min(d, distance(c.c, Seg(ps[i], ps[(i + 1) % n])));
+        d = std::min(d, distance(c.c, Segment(ps[i], ps[(i + 1) % n])));
     }
     int s = sgn(d - c.r);
     return s > 0 ? out : s < 0 ? in : on;
